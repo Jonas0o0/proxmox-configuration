@@ -11,15 +11,6 @@ Terraform est adapte pour :
 
 Il n'est pas ideal pour tout ce qui touche a l'interieur des VM. Pour installer Docker, configurer WireGuard, creer des utilisateurs Linux ou deployer des services, utilise plutot Ansible ensuite.
 
-## Donnees a ne pas versionner
-
-Ne commit pas :
-
-- `*.tfstate`
-- `*.tfstate.backup`
-- `*.tfvars` contenant des secrets
-- les tokens API Proxmox
-- les cles SSH privees
 
 ## Flux conseille
 

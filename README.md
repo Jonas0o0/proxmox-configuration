@@ -131,18 +131,6 @@ terraform plan
 terraform apply
 ```
 
-## Secrets
-
-Ne commit jamais :
-
-- `config/proxmox-bootstrap.env` ;
-- `terraform.tfvars` contenant des tokens ou mots de passe ;
-- `terraform.tfstate` ;
-- les tokens API Proxmox ;
-- les cles SSH privees ;
-- les cles privees WireGuard.
-
-Ces fichiers sont ignores par [.gitignore](.gitignore).
 
 ## Realise par
 
