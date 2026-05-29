@@ -1,0 +1,38 @@
+proxmox_endpoint             = "https://pve.home.arpa:8006/api2/json"
+proxmox_api_token            = "root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_ssh_username         = "root"
+proxmox_ssh_private_key_path = "~/.ssh/proxmox_terraform"
+
+node_name          = "pve"
+container_id       = 110
+container_hostname = "wireguard"
+container_os_type  = "alpine"
+
+rootfs_datastore_id = "local-lvm"
+network_bridge      = "vmbr0"
+network_vlan_id     = null
+ipv4_address        = "192.168.1.20/24"
+ipv4_gateway        = "192.168.1.1"
+dns_servers         = ["192.168.1.1", "1.1.1.1"]
+dns_domain          = "home.arpa"
+
+ssh_public_keys = [
+  "ssh-ed25519 AAAA... jonas"
+]
+
+wg_address      = "10.8.0.1/24"
+wg_network_cidr = "10.8.0.0/24"
+wg_listen_port  = 51820
+wg_enable_nat   = true
+
+# Optionnel. Si null, la cle serveur est generee dans la CT au premier demarrage.
+# wg_private_key = "..."
+
+# Ajoute tes clients ici apres avoir genere leur cle publique.
+wg_peers = [
+  # {
+  #   name        = "phone"
+  #   public_key  = "CLE_PUBLIQUE_CLIENT"
+  #   allowed_ips = ["10.8.0.2/32"]
+  # }
+]
