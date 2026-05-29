@@ -32,8 +32,10 @@ export TF_VAR_proxmox_api_token='root@pam!terraform=token'
 - `provider.tf` : configuration globale du provider Proxmox.
 - `variables.tf` : variables globales Proxmox.
 - `wg-easy.tf` : appel du module wg-easy.
+- `caddy.tf` : appel du module Caddy.
 - `modules/` : modules reutilisables pour les CT/VM.
 
 ## Modules disponibles
 
 - [modules/wg-easy-ct](modules/wg-easy-ct/) : cree une CT LXC Alpine/Debian avec wg-easy.
+- [modules/caddy-ct](modules/caddy-ct/) : cree une CT LXC Alpine/Debian avec Caddy.

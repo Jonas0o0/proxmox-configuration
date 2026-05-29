@@ -1,0 +1,10 @@
+{
+	email jonas.facon@proton.me
+}
+
+:80 {
+	root * /srv
+	file_server
+}
+
+import /etc/caddy/sites/*

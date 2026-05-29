@@ -15,3 +15,15 @@ wg_easy_ipv4_address             = "192.168.1.20/24"
 wg_easy_ipv4_gateway             = "192.168.1.1"
 wg_easy_dns_servers              = ["192.168.1.1", "1.1.1.1"]
 wg_easy_dns_domain               = "home.arpa"
+
+caddy_node_name                = "pve"
+caddy_container_id             = 109
+caddy_container_hostname       = "caddy"
+caddy_rootfs_datastore_id      = "local-lvm"
+caddy_snippets_datastore_id    = "snippets"
+caddy_network_bridge           = "vmbr0"
+caddy_network_vlan_id          = null
+caddy_ipv4_address             = "192.168.1.30/24"
+caddy_ipv4_gateway             = "192.168.1.1"
+caddy_dns_servers              = ["192.168.1.1", "1.1.1.1"]
+caddy_dns_domain               = "home.arpa"

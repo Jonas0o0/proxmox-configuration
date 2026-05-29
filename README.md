@@ -46,6 +46,7 @@ Le `--dry-run` permet de voir les actions avant de modifier le systeme.
 |   `-- bootstrap-proxmox.sh
 `-- terraform/
     |-- README.md
+    |-- caddy.tf
     |-- provider.tf
     |-- versions.tf
     |-- wg-easy.tf
@@ -118,7 +119,9 @@ Terraform est utilise pour gerer les ressources Proxmox : VM, CT, disques, resea
 Module disponible :
 
 - [terraform/wg-easy.tf](terraform/wg-easy.tf) : declare la CT wg-easy.
+- [terraform/caddy.tf](terraform/caddy.tf) : declare la CT Caddy.
 - [terraform/modules/wg-easy-ct](terraform/modules/wg-easy-ct/) : module reutilisable qui cree une CT LXC Alpine/Debian avec wg-easy.
+- [terraform/modules/caddy-ct](terraform/modules/caddy-ct/) : module reutilisable qui cree une CT LXC Alpine/Debian avec Caddy.
 
 Exemple wg-easy :
 

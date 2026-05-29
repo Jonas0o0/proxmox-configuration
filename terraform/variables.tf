@@ -107,3 +107,71 @@ variable "wg_easy_dns_domain" {
   type        = string
   default     = "home.arpa"
 }
+
+variable "caddy_node_name" {
+  description = "Nom du node Proxmox qui heberge la CT Caddy."
+  type        = string
+  default     = "pve"
+}
+
+variable "caddy_container_id" {
+  description = "VMID de la CT Caddy."
+  type        = number
+  default     = 109
+}
+
+variable "caddy_container_hostname" {
+  description = "Hostname de la CT Caddy."
+  type        = string
+  default     = "caddy"
+}
+
+variable "caddy_rootfs_datastore_id" {
+  description = "Storage Proxmox pour le disque rootfs de la CT Caddy."
+  type        = string
+  default     = "local-lvm"
+}
+
+variable "caddy_snippets_datastore_id" {
+  description = "Storage Proxmox avec contenu snippets active."
+  type        = string
+  default     = "snippets"
+}
+
+variable "caddy_network_bridge" {
+  description = "Bridge Proxmox pour la CT Caddy."
+  type        = string
+  default     = "vmbr0"
+}
+
+variable "caddy_network_vlan_id" {
+  description = "VLAN de la CT Caddy. Null pour aucun VLAN."
+  type        = number
+  default     = null
+  nullable    = true
+}
+
+variable "caddy_ipv4_address" {
+  description = "Adresse IPv4 de la CT Caddy en CIDR, ou dhcp."
+  type        = string
+  default     = "192.168.1.30/24"
+}
+
+variable "caddy_ipv4_gateway" {
+  description = "Gateway IPv4 de la CT Caddy. Doit rester null si caddy_ipv4_address vaut dhcp."
+  type        = string
+  default     = "192.168.1.1"
+  nullable    = true
+}
+
+variable "caddy_dns_servers" {
+  description = "Serveurs DNS injectes dans la CT Caddy."
+  type        = list(string)
+  default     = ["192.168.1.1", "1.1.1.1"]
+}
+
+variable "caddy_dns_domain" {
+  description = "Domaine de recherche DNS de la CT Caddy."
+  type        = string
+  default     = "home.arpa"
+}
