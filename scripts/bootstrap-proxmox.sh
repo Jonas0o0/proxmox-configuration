@@ -132,7 +132,11 @@ config_key_to_var() {
     backup.job.vmid|backup_job_vmid) printf 'BACKUP_JOB_VMID' ;;
     backup.job.prune|backup_job_prune) printf 'BACKUP_JOB_PRUNE' ;;
     terraform.enabled|run_terraform) printf 'RUN_TERRAFORM' ;;
+    terraform.install|terraform_install) printf 'TERRAFORM_INSTALL' ;;
+    terraform.version|terraform_version) printf 'TERRAFORM_VERSION' ;;
+    terraform.bin_dir|terraform_bin_dir) printf 'TERRAFORM_BIN_DIR' ;;
     terraform.dir|terraform_dir) printf 'TERRAFORM_DIR' ;;
+    terraform.plan_file|terraform_plan_file) printf 'TERRAFORM_PLAN_FILE' ;;
     terraform.auto_approve|terraform_auto_approve) printf 'TERRAFORM_AUTO_APPROVE' ;;
     *) return 1 ;;
   esac
@@ -554,21 +558,84 @@ configure_backup_job() {
   fi
 }
 
+terraform_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) printf 'amd64' ;;
+    aarch64|arm64) printf 'arm64' ;;
+    armv7l) printf 'arm' ;;
+    *)
+      die "architecture Terraform non supportee: $(uname -m)"
+      ;;
+  esac
+}
+
+install_terraform() {
+  bool_enabled "${TERRAFORM_INSTALL:-false}" || return 0
+
+  local version="${TERRAFORM_VERSION:-1.15.5}"
+  local bin_dir="${TERRAFORM_BIN_DIR:-/usr/local/bin}"
+  local current_version
+
+  if command -v terraform >/dev/null 2>&1; then
+    current_version="$(terraform version | awk 'NR == 1 {print $2}')"
+    if [[ "$current_version" == "v${version}" ]]; then
+      log "terraform deja installe: ${current_version}"
+      return 0
+    fi
+  fi
+
+  local arch url tmp zip
+  arch="$(terraform_arch)"
+  url="https://releases.hashicorp.com/terraform/${version}/terraform_${version}_linux_${arch}.zip"
+  tmp="$(mktemp -d)"
+  zip="${tmp}/terraform.zip"
+
+  log "installation Terraform ${version}"
+  run mkdir -p "$bin_dir"
+  run curl -fsSL "$url" -o "$zip"
+  run unzip -o "$zip" -d "$tmp"
+  run install -m 0755 "${tmp}/terraform" "${bin_dir}/terraform"
+
+  rm -rf "$tmp"
+}
+
 run_terraform() {
   bool_enabled "${RUN_TERRAFORM:-false}" || return 0
 
-  command -v terraform >/dev/null 2>&1 || die "terraform introuvable"
-  [[ -d "${TERRAFORM_DIR:-}" ]] || die "TERRAFORM_DIR introuvable: ${TERRAFORM_DIR:-}"
+  install_terraform
+
+  if ! command -v terraform >/dev/null 2>&1; then
+    bool_enabled "$DRY_RUN" || die "terraform introuvable"
+    log "dry-run: terraform introuvable"
+  fi
+
+  if [[ ! -d "${TERRAFORM_DIR:-}" ]]; then
+    bool_enabled "$DRY_RUN" || die "TERRAFORM_DIR introuvable: ${TERRAFORM_DIR:-}"
+    log "dry-run: TERRAFORM_DIR introuvable: ${TERRAFORM_DIR:-}"
+  fi
+
+  local plan_file="${TERRAFORM_PLAN_FILE:-tfplan}"
 
   log "terraform init: ${TERRAFORM_DIR}"
-  run terraform -chdir="$TERRAFORM_DIR" init
+  run terraform -chdir="$TERRAFORM_DIR" init -input=false
 
-  if bool_enabled "${TERRAFORM_AUTO_APPROVE:-false}"; then
-    log "terraform apply auto-approve"
-    run terraform -chdir="$TERRAFORM_DIR" apply -auto-approve
+  log "terraform validate"
+  run terraform -chdir="$TERRAFORM_DIR" validate
+
+  log "terraform plan: ${plan_file}"
+  run terraform -chdir="$TERRAFORM_DIR" plan -input=false -out="$plan_file"
+
+  if bool_enabled "$DRY_RUN"; then
+    log "terraform apply: ${plan_file}"
+    run terraform -chdir="$TERRAFORM_DIR" apply -input=false "$plan_file"
+  elif bool_enabled "${TERRAFORM_AUTO_APPROVE:-false}"; then
+    log "terraform apply: ${plan_file}"
+    run terraform -chdir="$TERRAFORM_DIR" apply -input=false "$plan_file"
   else
-    log "terraform apply interactif"
-    run terraform -chdir="$TERRAFORM_DIR" apply
+    confirm_sensitive_action "Appliquer le plan Terraform ${plan_file} ?" \
+      || die "application Terraform annulee"
+    log "terraform apply: ${plan_file}"
+    run terraform -chdir="$TERRAFORM_DIR" apply -input=false "$plan_file"
   fi
 }
 

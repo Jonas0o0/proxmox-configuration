@@ -26,6 +26,12 @@ Le token API Proxmox ne doit pas etre commit. Exporte-le avant de lancer Terrafo
 export TF_VAR_proxmox_api_token='root@pam!terraform=token'
 ```
 
+En mode GitOps, ces valeurs sont injectees par GitHub Actions sur le node Proxmox. Le workflow lance `scripts/bootstrap-proxmox.sh`, et c'est ce script qui execute Terraform quand `terraform.enabled: true`.
+
+Voir :
+
+[../docs/gitops.md](../docs/gitops.md)
+
 ## Organisation
 
 - `versions.tf` : versions Terraform/providers globales.

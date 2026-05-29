@@ -1,12 +1,11 @@
-# Copie ce fichier vers config/proxmox-bootstrap.yml puis adapte les valeurs.
-# Ce fichier est lu par scripts/bootstrap-proxmox.sh sur le node Proxmox.
+# Source de verite du bootstrap Proxmox.
+# Les secrets restent hors Git et doivent etre fournis via GitHub Actions ou des fichiers locaux sur le node.
 
 base:
   proxmox_hostname: pve
   timezone: Europe/Paris
 
 apt:
-  # Valeurs: no-subscription, enterprise, none
   channel: no-subscription
   update: true
   dist_upgrade: false
@@ -24,7 +23,7 @@ ssh:
   permit_root_login: prohibit-password
 
 network:
-  # Attention: enabled: true reecrit /etc/network/interfaces.
+  # Passe a true quand tu veux que Git gere /etc/network/interfaces.
   enabled: false
   reload: false
 
@@ -78,11 +77,11 @@ backup:
     prune: keep-daily=7,keep-weekly=4,keep-monthly=3
 
 terraform:
-  # A utiliser si tu veux que le meme bootstrap lance aussi la creation/update des VM.
-  enabled: false
+  # En GitOps, le bootstrap est le point d'entree unique et lance aussi Terraform.
+  enabled: true
   install: true
   version: 1.15.5
   bin_dir: /usr/local/bin
   dir: /root/prox/terraform
   plan_file: tfplan
-  auto_approve: false
+  auto_approve: true

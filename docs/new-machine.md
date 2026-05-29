@@ -100,13 +100,12 @@ Si le node n'a pas encore acces a Git, copie le repo depuis ta machine :
 scp -r ./prox root@192.168.1.10:/root/prox
 ```
 
-## 6. Preparer la configuration bootstrap
+## 6. Verifier la configuration bootstrap
 
-Copie le fichier exemple :
+Le fichier de bootstrap est versionne dans le repo :
 
 ```bash
 cd /root/prox
-cp config/proxmox-bootstrap.yml.example config/proxmox-bootstrap.yml
 nano config/proxmox-bootstrap.yml
 ```
 
@@ -151,6 +150,8 @@ network:
 
 Si tu actives `network.enabled: true`, fais le premier run depuis la console locale ou l'interface Web Proxmox. Une erreur reseau peut couper ta session SSH.
 
+En mode GitOps, ce meme fichier sera ensuite applique automatiquement par GitHub Actions a chaque push sur `main`.
+
 ## 7. Tester sans appliquer
 
 Lance un dry-run :
@@ -185,34 +186,30 @@ Le script peut gerer :
 
 ## 9. Creer ou mettre a jour les VM
 
-Si tu veux que le bootstrap lance aussi Terraform :
-
-```bash
-cd /root/prox
-cp terraform/terraform.tfvars.example terraform/terraform.tfvars
-nano terraform/terraform.tfvars
-nano terraform/wg-easy.tf
-```
-
-Puis dans `config/proxmox-bootstrap.yml` :
+En mode GitOps, le bootstrap lance aussi Terraform :
 
 ```yaml
 terraform:
   enabled: true
+  install: true
   dir: /root/prox/terraform
-  auto_approve: false
+  plan_file: tfplan
+  auto_approve: true
 ```
 
-Sinon, lance Terraform manuellement :
+Les secrets Terraform, le token Proxmox et le backend distant sont injectes par GitHub Actions.
+
+En manuel, tu peux soit laisser `terraform.enabled: false`, soit exporter les secrets puis lancer :
 
 ```bash
 cd /root/prox/terraform
 terraform init
+terraform validate
 terraform plan
 terraform apply
 ```
 
-Garde `terraform.auto_approve: false` au debut pour voir le plan avant application.
+Garde `terraform.auto_approve: false` au debut si tu veux confirmer manuellement l'application du plan.
 
 ## 10. Verification finale
 

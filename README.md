@@ -23,7 +23,6 @@ Sur un serveur Proxmox fraichement installe :
 git clone <url-du-repo> /root/prox
 cd /root/prox
 
-cp config/proxmox-bootstrap.yml.example config/proxmox-bootstrap.yml
 nano config/proxmox-bootstrap.yml
 
 sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --dry-run
@@ -37,9 +36,14 @@ Le `--dry-run` permet de voir les actions avant de modifier le systeme.
 ```text
 .
 |-- config/
+|   |-- proxmox-bootstrap.yml
 |   `-- proxmox-bootstrap.yml.example
+|-- .github/
+|   `-- workflows/
+|       `-- proxmox-gitops.yml
 |-- docs/
 |   |-- bootstrap-config.md
+|   |-- gitops.md
 |   |-- new-machine.md
 |   `-- update-existing-node.md
 |-- scripts/
@@ -111,6 +115,26 @@ terraform validate
 terraform plan
 terraform apply
 ```
+
+## GitOps
+
+Le repo peut appliquer automatiquement les changements Proxmox a chaque push sur `main`.
+
+Le workflow est ici :
+
+[.github/workflows/proxmox-gitops.yml](.github/workflows/proxmox-gitops.yml)
+
+Il utilise un runner GitHub Actions self-hosted dans le homelab. A chaque run, il upload le repo sur le node Proxmox puis lance `scripts/bootstrap-proxmox.sh`.
+
+Le bootstrap configure le node et lance Terraform si `terraform.enabled: true` dans `config/proxmox-bootstrap.yml`.
+
+Les secrets restent dans GitHub Actions. La configuration non sensible du node est dans :
+
+[config/proxmox-bootstrap.yml](config/proxmox-bootstrap.yml)
+
+Documentation :
+
+[docs/gitops.md](docs/gitops.md)
 
 ## Terraform
 

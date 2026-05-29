@@ -23,27 +23,27 @@ git pull
 
 Si `git status` montre des fichiers modifies localement, lis-les avant de faire `git pull`.
 
-## 2. Verifier la configuration locale
+## 2. Verifier la configuration bootstrap
 
-Le fichier reel de bootstrap n'est pas versionne :
+Le fichier de bootstrap est versionne et sert de source de verite :
 
 ```bash
 config/proxmox-bootstrap.yml
 ```
 
-Verifie qu'il existe toujours :
+Verifie les changements avant application :
 
 ```bash
-test -f config/proxmox-bootstrap.yml
+git diff HEAD -- config/proxmox-bootstrap.yml
 ```
 
-Si le fichier exemple a change, compare :
+Si le fichier exemple a change, compare au besoin :
 
 ```bash
 diff -u config/proxmox-bootstrap.yml.example config/proxmox-bootstrap.yml
 ```
 
-Adapte `config/proxmox-bootstrap.yml` si une nouvelle variable utile a ete ajoutee.
+Adapte `config/proxmox-bootstrap.yml` si une nouvelle variable utile a ete ajoutee. Ne mets pas de secret dans ce fichier.
 
 ## 3. Appliquer les changements du node
 
@@ -59,7 +59,7 @@ Puis applique :
 sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --yes
 ```
 
-Tu n'es pas oblige de relancer le bootstrap pour chaque nouvelle VM. Si seuls les fichiers Terraform ont change, passe directement a la partie Terraform.
+En mode GitOps, le workflow relance le bootstrap a chaque push. Si `terraform.enabled: true`, le bootstrap lance aussi Terraform. En manuel, tu n'es pas oblige de relancer le bootstrap pour chaque nouvelle VM si seuls les fichiers Terraform ont change.
 
 ## 4. Appliquer les changements Terraform
 
@@ -97,7 +97,7 @@ Pour une nouvelle VM, le plan doit normalement afficher une creation, pas une de
 
 ## 5. Cas typique : ajout d'une nouvelle VM
 
-Workflow recommande :
+Workflow manuel :
 
 1. Ajouter les fichiers Terraform de la VM dans le repo.
 2. Commit et push depuis ta machine de dev.
@@ -108,6 +108,13 @@ Workflow recommande :
 7. Lire le plan.
 8. Appliquer avec `terraform apply`.
 9. Verifier la VM dans Proxmox.
+
+Workflow GitOps :
+
+1. Ajouter ou modifier les fichiers dans le repo.
+2. Commit et push sur `main`.
+3. GitHub Actions lance le bootstrap, qui lance Terraform si active.
+4. Verifier le run GitHub Actions et l'etat dans Proxmox.
 
 Commandes :
 

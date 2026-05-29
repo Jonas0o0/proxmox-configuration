@@ -1,0 +1,296 @@
+name: Proxmox GitOps
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxmox-gitops-main
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply Proxmox state
+    runs-on: self-hosted
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_CLI_ARGS: "-no-color"
+      TERRAFORM_VERSION: "1.15.5"
+
+      PROXMOX_ENDPOINT: ${{ secrets.PROXMOX_ENDPOINT }}
+      PROXMOX_API_TOKEN: ${{ secrets.PROXMOX_API_TOKEN }}
+      PROXMOX_SSH_HOST: ${{ secrets.PROXMOX_SSH_HOST }}
+      PROXMOX_SSH_PRIVATE_KEY: ${{ secrets.PROXMOX_SSH_PRIVATE_KEY }}
+      PROXMOX_SSH_USERNAME: ${{ secrets.PROXMOX_SSH_USERNAME }}
+      PROXMOX_BOOTSTRAP_CONFIG_YML: ${{ secrets.PROXMOX_BOOTSTRAP_CONFIG_YML }}
+      PROXMOX_REMOTE_REPO_DIR: ${{ vars.PROXMOX_REMOTE_REPO_DIR }}
+      CT_SSH_PUBLIC_KEYS: ${{ secrets.CT_SSH_PUBLIC_KEYS }}
+
+      TF_BACKEND_HCL: ${{ secrets.TF_BACKEND_HCL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.TF_STATE_SESSION_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Check required inputs
+        run: |
+          missing=0
+
+          check_secret() {
+            local name="$1"
+            local value="$2"
+
+            if [ -z "$value" ]; then
+              echo "::error title=Secret manquant::$name doit etre configure dans les secrets GitHub Actions."
+              missing=1
+            fi
+          }
+
+          check_secret "PROXMOX_ENDPOINT" "$PROXMOX_ENDPOINT"
+          check_secret "PROXMOX_API_TOKEN" "$PROXMOX_API_TOKEN"
+          check_secret "PROXMOX_SSH_PRIVATE_KEY" "$PROXMOX_SSH_PRIVATE_KEY"
+          check_secret "TF_BACKEND_HCL" "$TF_BACKEND_HCL"
+
+          if [ ! -f config/proxmox-bootstrap.yml ] && [ -z "$PROXMOX_BOOTSTRAP_CONFIG_YML" ]; then
+            echo "::error title=Config bootstrap manquante::Ajoute config/proxmox-bootstrap.yml au repo ou configure le secret PROXMOX_BOOTSTRAP_CONFIG_YML."
+            missing=1
+          fi
+
+          exit "$missing"
+
+      - name: Terraform fmt
+        working-directory: terraform
+        run: terraform fmt -check -recursive
+
+      - name: Prepare bootstrap config
+        run: |
+          if [ -f config/proxmox-bootstrap.yml ]; then
+            exit 0
+          fi
+
+          printf '%s\n' "$PROXMOX_BOOTSTRAP_CONFIG_YML" > config/proxmox-bootstrap.yml
+
+      - name: Prepare runner secrets
+        run: |
+          ssh_host="$PROXMOX_SSH_HOST"
+          if [ -z "$ssh_host" ]; then
+            ssh_host="${PROXMOX_ENDPOINT#*://}"
+            ssh_host="${ssh_host%%/*}"
+            ssh_host="${ssh_host%%:*}"
+          fi
+
+          if [ -z "$ssh_host" ]; then
+            echo "::error title=Host SSH introuvable::Configure PROXMOX_SSH_HOST ou un PROXMOX_ENDPOINT valide."
+            exit 1
+          fi
+
+          remote_dir="${PROXMOX_REMOTE_REPO_DIR:-/root/prox}"
+          case "$remote_dir" in
+            ""|"/"|"/root"|"/home"|"/opt"|"/srv")
+              echo "::error title=Chemin remote dangereux::PROXMOX_REMOTE_REPO_DIR vaut '$remote_dir'."
+              exit 1
+              ;;
+            /*)
+              ;;
+            *)
+              echo "::error title=Chemin remote invalide::PROXMOX_REMOTE_REPO_DIR doit etre un chemin absolu."
+              exit 1
+              ;;
+          esac
+
+          key_path="$RUNNER_TEMP/proxmox_terraform_key"
+
+          printf '%s\n' "$PROXMOX_SSH_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          mkdir -p .gitops
+          chmod 700 .gitops
+          cp "$key_path" .gitops/proxmox_terraform_key
+          chmod 600 .gitops/proxmox_terraform_key
+          printf '%s\n' "$TF_BACKEND_HCL" > terraform/backend.tf
+          chmod 600 terraform/backend.tf
+
+          env_file=".gitops/terraform.env"
+          : > "$env_file"
+          chmod 600 "$env_file"
+
+          write_remote_env() {
+            local name="$1"
+            local value="$2"
+
+            if [ -z "$value" ]; then
+              return 0
+            fi
+
+            printf 'export %s=' "$name" >> "$env_file"
+            printf '%q\n' "$value" >> "$env_file"
+          }
+
+          append_env() {
+            local name="$1"
+            local value="$2"
+            local marker="EOF_${name}"
+
+            {
+              echo "${name}<<${marker}"
+              echo "$value"
+              echo "$marker"
+            } >> "$GITHUB_ENV"
+          }
+
+          append_env "PROXMOX_SSH_HOST_RESOLVED" "$ssh_host"
+          append_env "PROXMOX_REMOTE_REPO_DIR_RESOLVED" "$remote_dir"
+          append_env "PROXMOX_SSH_KEY_PATH" "$key_path"
+
+          write_remote_env "TF_IN_AUTOMATION" "true"
+          write_remote_env "TF_INPUT" "false"
+          write_remote_env "TF_CLI_ARGS" "-no-color"
+          write_remote_env "TF_VAR_proxmox_endpoint" "$PROXMOX_ENDPOINT"
+          write_remote_env "TF_VAR_proxmox_api_token" "$PROXMOX_API_TOKEN"
+          write_remote_env "TF_VAR_proxmox_ssh_private_key_path" "${remote_dir}/.gitops/proxmox_terraform_key"
+          write_remote_env "TF_VAR_proxmox_ssh_agent" "false"
+          write_remote_env "AWS_ACCESS_KEY_ID" "$AWS_ACCESS_KEY_ID"
+          write_remote_env "AWS_SECRET_ACCESS_KEY" "$AWS_SECRET_ACCESS_KEY"
+          write_remote_env "AWS_SESSION_TOKEN" "$AWS_SESSION_TOKEN"
+
+          if [ -n "$PROXMOX_SSH_USERNAME" ]; then
+            write_remote_env "TF_VAR_proxmox_ssh_username" "$PROXMOX_SSH_USERNAME"
+          fi
+
+          if [ -n "$CT_SSH_PUBLIC_KEYS" ]; then
+            write_remote_env "TF_VAR_ssh_public_keys" "$CT_SSH_PUBLIC_KEYS"
+          fi
+
+      - name: Upload repo to Proxmox
+        run: |
+          ssh_user="${PROXMOX_SSH_USERNAME:-root}"
+          ssh_target="${ssh_user}@${PROXMOX_SSH_HOST_RESOLVED}"
+          remote_dir="$PROXMOX_REMOTE_REPO_DIR_RESOLVED"
+
+          ssh_opts=(
+            -i "$PROXMOX_SSH_KEY_PATH"
+            -o StrictHostKeyChecking=accept-new
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+          )
+
+          printf -v quoted_remote_dir '%q' "$remote_dir"
+
+          ssh "${ssh_opts[@]}" "$ssh_target" "rm -rf $quoted_remote_dir && mkdir -p $quoted_remote_dir"
+
+          tar -czf - \
+            --exclude='./.git' \
+            --exclude='./terraform/.terraform' \
+            --exclude='./terraform/tfplan' \
+            . | ssh "${ssh_opts[@]}" "$ssh_target" "tar -xzf - -C $quoted_remote_dir"
+
+      - name: Run Proxmox bootstrap
+        run: |
+          ssh_user="${PROXMOX_SSH_USERNAME:-root}"
+          ssh_target="${ssh_user}@${PROXMOX_SSH_HOST_RESOLVED}"
+          remote_dir="$PROXMOX_REMOTE_REPO_DIR_RESOLVED"
+          run_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          status_file="/var/tmp/proxmox-gitops-bootstrap-${run_id}.status"
+          log_file="/var/log/proxmox-gitops-bootstrap.log"
+
+          ssh_opts=(
+            -i "$PROXMOX_SSH_KEY_PATH"
+            -o StrictHostKeyChecking=accept-new
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+          )
+
+          printf -v quoted_remote_dir '%q' "$remote_dir"
+          printf -v quoted_status_file '%q' "$status_file"
+          printf -v quoted_log_file '%q' "$log_file"
+
+          ssh "${ssh_opts[@]}" "$ssh_target" \
+            "REMOTE_DIR=$quoted_remote_dir STATUS_FILE=$quoted_status_file LOG_FILE=$quoted_log_file bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+
+          rm -f "$STATUS_FILE"
+
+          nohup bash -c '
+            repo_dir="$1"
+            status_file="$2"
+            status=0
+
+            cleanup() {
+              rm -rf "${repo_dir}/.gitops"
+              rm -f "${repo_dir}/terraform/backend.tf" "${repo_dir}/terraform/tfplan"
+            }
+
+            trap cleanup EXIT
+
+            cd "$repo_dir" || status=$?
+
+            if [ "$status" -eq 0 ]; then
+              if [ -f .gitops/terraform.env ]; then
+                . .gitops/terraform.env || status=$?
+              else
+                echo "fichier .gitops/terraform.env introuvable"
+                status=1
+              fi
+            fi
+
+            if [ "$status" -eq 0 ]; then
+              ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --yes || status=$?
+            fi
+
+            printf "%s\n" "$status" > "$status_file"
+            exit "$status"
+          ' bash "$REMOTE_DIR" "$STATUS_FILE" > "$LOG_FILE" 2>&1 < /dev/null &
+          REMOTE
+
+          bootstrap_status=""
+          for _ in $(seq 1 120); do
+            set +e
+            bootstrap_status="$(ssh "${ssh_opts[@]}" "$ssh_target" "test -f $quoted_status_file && cat $quoted_status_file" 2>/dev/null)"
+            ssh_status=$?
+            set -e
+
+            if [ "$ssh_status" -eq 0 ] && [ -n "$bootstrap_status" ]; then
+              break
+            fi
+
+            sleep 10
+          done
+
+          ssh "${ssh_opts[@]}" "$ssh_target" "test -f $quoted_log_file && tail -n 120 $quoted_log_file" || true
+
+          if [ -z "$bootstrap_status" ]; then
+            echo "::error title=Bootstrap timeout::Le bootstrap n'a pas rendu de statut apres 20 minutes."
+            exit 1
+          fi
+
+          if [ "$bootstrap_status" != "0" ]; then
+            echo "::error title=Bootstrap echoue::Le bootstrap Proxmox a termine avec le code $bootstrap_status."
+            exit "$bootstrap_status"
+          fi
+
+      - name: Cleanup secrets
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/proxmox_terraform_key"
+          rm -rf .gitops
+          rm -f terraform/backend.tf terraform/tfplan

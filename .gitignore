@@ -4,14 +4,17 @@
 *.tfstate.backup
 *.tfvars
 *.tfvars.json
+terraform/backend.tf
+terraform/tfplan
+.gitops/
 
 # Secrets
 *.key
 *.pem
 *.p12
 *.pfx
-config/proxmox-bootstrap.yml
-config/proxmox-bootstrap.yaml
+config/proxmox-bootstrap.local.yml
+config/proxmox-bootstrap.local.yaml
 config/proxmox-bootstrap.env
 
 # Local agents

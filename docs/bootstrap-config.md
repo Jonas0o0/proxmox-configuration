@@ -2,12 +2,20 @@
 
 Ce fichier explique les cles utilisables dans `config/proxmox-bootstrap.yml`.
 
-Le fichier reel n'est pas versionne. Cree-le depuis l'exemple :
+Le fichier reel est versionne pour servir de source de verite GitOps :
+
+```bash
+config/proxmox-bootstrap.yml
+```
+
+Pour repartir de l'exemple :
 
 ```bash
 cp config/proxmox-bootstrap.yml.example config/proxmox-bootstrap.yml
 nano config/proxmox-bootstrap.yml
 ```
+
+Ne mets pas de secret dans ce fichier. Les secrets doivent rester dans GitHub Actions ou dans des fichiers locaux non versionnes.
 
 Avant d'appliquer :
 
@@ -58,6 +66,7 @@ apt:
     - git
     - vim
     - jq
+    - unzip
     - ifupdown2
 ```
 
@@ -203,15 +212,32 @@ backup:
 ```yaml
 terraform:
   enabled: false
+  install: true
+  version: 1.15.5
+  bin_dir: /usr/local/bin
   dir: /root/prox/terraform
+  plan_file: tfplan
   auto_approve: false
 ```
 
 - `terraform.enabled` : lance Terraform a la fin du bootstrap.
+- `terraform.install` : installe Terraform si la version demandee n'est pas disponible.
+- `terraform.version` : version Terraform a installer.
+- `terraform.bin_dir` : dossier ou installer le binaire Terraform.
 - `terraform.dir` : dossier Terraform a executer.
-- `terraform.auto_approve` : ajoute `-auto-approve` a `terraform apply`.
+- `terraform.plan_file` : nom du fichier de plan cree par `terraform plan -out`.
+- `terraform.auto_approve` : applique le plan sans confirmation interactive.
 
-Garde `terraform.auto_approve: false` au debut pour lire le plan Terraform avant application.
+Quand `terraform.enabled` est actif, le bootstrap lance :
+
+```bash
+terraform init -input=false
+terraform validate
+terraform plan -input=false -out=tfplan
+terraform apply -input=false tfplan
+```
+
+Garde `terraform.auto_approve: false` au debut pour confirmer manuellement l'application du plan.
 
 ## Profil minimal
 
@@ -229,6 +255,7 @@ apt:
     - git
     - vim
     - jq
+    - unzip
     - ifupdown2
 
 ssh:
