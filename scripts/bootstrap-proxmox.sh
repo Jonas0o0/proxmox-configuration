@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-CONFIG_FILE="${REPO_ROOT}/config/proxmox-bootstrap.env"
+CONFIG_FILE="${REPO_ROOT}/config/proxmox-bootstrap.yml"
 DRY_RUN=false
 ASSUME_YES=false
 
@@ -21,13 +21,13 @@ usage() {
 Usage: scripts/bootstrap-proxmox.sh [options]
 
 Options:
-  --config PATH   Fichier de configuration a charger
+  --config PATH   Fichier de configuration a charger (.yml ou .env)
   --dry-run       Affiche les actions sans les executer
   --yes           Ne demande pas de confirmation pour les actions sensibles
   -h, --help      Affiche cette aide
 
 Exemple:
-  sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --yes
+  sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --yes
 EOF
 }
 
@@ -61,6 +61,108 @@ bool_enabled() {
     true|TRUE|yes|YES|1|on|ON) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+trim() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+strip_yaml_scalar() {
+  local value
+  value="$(trim "$1")"
+
+  case "$value" in
+    '""'|"''"|"[]"|"null"|"~")
+      printf ''
+      return 0
+      ;;
+  esac
+
+  if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+    value="${value:1:${#value}-2}"
+  elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+
+  printf '%s' "$value"
+}
+
+config_key_to_var() {
+  case "$1" in
+    base.proxmox_hostname|proxmox_hostname) printf 'PROXMOX_HOSTNAME' ;;
+    base.timezone|timezone) printf 'TIMEZONE' ;;
+    apt.channel|apt_channel) printf 'APT_CHANNEL' ;;
+    apt.update|run_apt_update) printf 'RUN_APT_UPDATE' ;;
+    apt.dist_upgrade|run_apt_dist_upgrade) printf 'RUN_APT_DIST_UPGRADE' ;;
+    apt.packages|install_packages) printf 'INSTALL_PACKAGES' ;;
+    ssh.hardening|ssh_hardening) printf 'SSH_HARDENING' ;;
+    ssh.password_auth|ssh_password_auth) printf 'SSH_PASSWORD_AUTH' ;;
+    ssh.permit_root_login|ssh_permit_root_login) printf 'SSH_PERMIT_ROOT_LOGIN' ;;
+    network.enabled|manage_network) printf 'MANAGE_NETWORK' ;;
+    network.reload|apply_network_reload) printf 'APPLY_NETWORK_RELOAD' ;;
+    network.management.iface|mgmt_iface) printf 'MGMT_IFACE' ;;
+    network.management.bridge|mgmt_bridge) printf 'MGMT_BRIDGE' ;;
+    network.management.address|mgmt_address) printf 'MGMT_ADDRESS' ;;
+    network.management.gateway|mgmt_gateway) printf 'MGMT_GATEWAY' ;;
+    network.management.dns|mgmt_dns) printf 'MGMT_DNS' ;;
+    network.bridge.vlan_aware|bridge_vlan_aware) printf 'BRIDGE_VLAN_AWARE' ;;
+    network.bridge.vids|bridge_vids) printf 'BRIDGE_VIDS' ;;
+    network.extra_bridges|extra_bridges) printf 'EXTRA_BRIDGES' ;;
+    storage.snippets.enabled|create_snippets_storage) printf 'CREATE_SNIPPETS_STORAGE' ;;
+    storage.snippets.id|snippets_storage_id) printf 'SNIPPETS_STORAGE_ID' ;;
+    storage.snippets.path|snippets_path) printf 'SNIPPETS_PATH' ;;
+    storage.backup_dir.enabled|create_backup_dir_storage) printf 'CREATE_BACKUP_DIR_STORAGE' ;;
+    storage.backup_dir.id|backup_dir_storage_id) printf 'BACKUP_DIR_STORAGE_ID' ;;
+    storage.backup_dir.path|backup_dir_path) printf 'BACKUP_DIR_PATH' ;;
+    pbs.enabled|pbs_enabled) printf 'PBS_ENABLED' ;;
+    pbs.storage_id|pbs_storage_id) printf 'PBS_STORAGE_ID' ;;
+    pbs.server|pbs_server) printf 'PBS_SERVER' ;;
+    pbs.datastore|pbs_datastore) printf 'PBS_DATASTORE' ;;
+    pbs.username|pbs_username) printf 'PBS_USERNAME' ;;
+    pbs.password_file|pbs_password_file) printf 'PBS_PASSWORD_FILE' ;;
+    pbs.fingerprint|pbs_fingerprint) printf 'PBS_FINGERPRINT' ;;
+    backup.job.enabled|backup_job_enabled) printf 'BACKUP_JOB_ENABLED' ;;
+    backup.job.id|backup_job_id) printf 'BACKUP_JOB_ID' ;;
+    backup.job.storage|backup_job_storage) printf 'BACKUP_JOB_STORAGE' ;;
+    backup.job.schedule|backup_job_schedule) printf 'BACKUP_JOB_SCHEDULE' ;;
+    backup.job.mode|backup_job_mode) printf 'BACKUP_JOB_MODE' ;;
+    backup.job.vmid|backup_job_vmid) printf 'BACKUP_JOB_VMID' ;;
+    backup.job.prune|backup_job_prune) printf 'BACKUP_JOB_PRUNE' ;;
+    terraform.enabled|run_terraform) printf 'RUN_TERRAFORM' ;;
+    terraform.dir|terraform_dir) printf 'TERRAFORM_DIR' ;;
+    terraform.auto_approve|terraform_auto_approve) printf 'TERRAFORM_AUTO_APPROVE' ;;
+    *) return 1 ;;
+  esac
+}
+
+set_config_value() {
+  local key="$1"
+  local value="$2"
+  local var_name
+
+  var_name="$(config_key_to_var "$key")" || die "cle YAML inconnue: $key"
+  printf -v "$var_name" '%s' "$value"
+  export "$var_name"
+}
+
+append_config_value() {
+  local key="$1"
+  local value="$2"
+  local var_name current
+
+  var_name="$(config_key_to_var "$key")" || die "cle YAML inconnue: $key"
+  current="${!var_name:-}"
+
+  if [[ -z "$current" ]]; then
+    printf -v "$var_name" '%s' "$value"
+  else
+    printf -v "$var_name" '%s %s' "$current" "$value"
+  fi
+
+  export "$var_name"
 }
 
 run() {
@@ -114,12 +216,72 @@ write_file_if_changed() {
   fi
 }
 
-load_config() {
-  [[ -f "$CONFIG_FILE" ]] || die "fichier config introuvable: $CONFIG_FILE"
+load_yaml_config() {
+  local line key value item current_key path indent level
+  local -a yaml_path
+  current_key=""
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+
+    [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+    if [[ "$line" =~ ^[[:space:]]+-[[:space:]]*(.*)$ ]]; then
+      [[ -n "$current_key" ]] || die "liste YAML sans cle parente dans $CONFIG_FILE"
+      item="$(strip_yaml_scalar "${BASH_REMATCH[1]}")"
+      [[ -n "$item" ]] && append_config_value "$current_key" "$item"
+      continue
+    fi
+
+    if [[ "$line" =~ ^([[:space:]]*)([a-zA-Z0-9_]+):[[:space:]]*(.*)$ ]]; then
+      indent="${#BASH_REMATCH[1]}"
+      key="${BASH_REMATCH[2]}"
+      value="$(strip_yaml_scalar "${BASH_REMATCH[3]}")"
+
+      if (( indent % 2 != 0 )); then
+        die "indentation YAML non supportee dans $CONFIG_FILE: $line"
+      fi
+
+      level=$((indent / 2))
+      yaml_path[$level]="$key"
+
+      while ((${#yaml_path[@]} > level + 1)); do
+        unset 'yaml_path[-1]'
+      done
+
+      path="$(IFS=.; printf '%s' "${yaml_path[*]}")"
+      current_key="$path"
+
+      [[ -n "$value" ]] && set_config_value "$path" "$value"
+      continue
+    fi
+
+    die "ligne YAML non supportee dans $CONFIG_FILE: $line"
+  done < "$CONFIG_FILE"
+}
+
+load_env_config() {
   # shellcheck source=/dev/null
   set -a
   source "$CONFIG_FILE"
   set +a
+}
+
+load_config() {
+  [[ -f "$CONFIG_FILE" ]] || die "fichier config introuvable: $CONFIG_FILE"
+
+  case "$CONFIG_FILE" in
+    *.yml|*.yaml|*.yml.example|*.yaml.example)
+      load_yaml_config
+      ;;
+    *.env|*.env.example)
+      load_env_config
+      ;;
+    *)
+      die "format de config non supporte: $CONFIG_FILE (utilise .yml ou .env)"
+      ;;
+  esac
 }
 
 require_proxmox_host() {

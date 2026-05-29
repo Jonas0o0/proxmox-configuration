@@ -23,11 +23,11 @@ Sur un serveur Proxmox fraichement installe :
 git clone <url-du-repo> /root/prox
 cd /root/prox
 
-cp config/proxmox-bootstrap.env.example config/proxmox-bootstrap.env
-nano config/proxmox-bootstrap.env
+cp config/proxmox-bootstrap.yml.example config/proxmox-bootstrap.yml
+nano config/proxmox-bootstrap.yml
 
-sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --dry-run
-sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --yes
+sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --dry-run
+sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --yes
 ```
 
 Le `--dry-run` permet de voir les actions avant de modifier le systeme.
@@ -37,13 +37,11 @@ Le `--dry-run` permet de voir les actions avant de modifier le systeme.
 ```text
 .
 |-- config/
-|   `-- proxmox-bootstrap.env.example
+|   `-- proxmox-bootstrap.yml.example
 |-- docs/
 |   |-- bootstrap-config.md
 |   |-- new-machine.md
 |   `-- update-existing-node.md
-|-- inventory/
-|   `-- proxmox.example.yml
 |-- scripts/
 |   `-- bootstrap-proxmox.sh
 `-- terraform/
@@ -56,7 +54,7 @@ Le `--dry-run` permet de voir les actions avant de modifier le systeme.
 Le script principal est :
 
 ```bash
-sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --yes
+sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --yes
 ```
 
 Il peut gerer :

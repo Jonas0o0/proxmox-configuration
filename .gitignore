@@ -10,7 +10,8 @@
 *.pem
 *.p12
 *.pfx
-inventory/proxmox.yml
+config/proxmox-bootstrap.yml
+config/proxmox-bootstrap.yaml
 config/proxmox-bootstrap.env
 
 # Local agents

@@ -14,11 +14,10 @@ Il n'est pas ideal pour tout ce qui touche a l'interieur des VM. Pour installer 
 
 ## Flux conseille
 
-1. Decris l'etat voulu dans `inventory/proxmox.yml`.
-2. Traduis les VM importantes en ressources Terraform.
-3. Lance `terraform init`.
-4. Lance `terraform plan`.
-5. Applique avec `terraform apply`.
+1. Decris les ressources voulues directement dans les fichiers Terraform.
+2. Lance `terraform init`.
+3. Lance `terraform plan`.
+4. Applique avec `terraform apply`.
 
 ## Modules disponibles
 

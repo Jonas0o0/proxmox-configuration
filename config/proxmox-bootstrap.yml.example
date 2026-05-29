@@ -1,0 +1,83 @@
+# Copie ce fichier vers config/proxmox-bootstrap.yml puis adapte les valeurs.
+# Ce fichier est lu par scripts/bootstrap-proxmox.sh sur le node Proxmox.
+
+base:
+  proxmox_hostname: pve
+  timezone: Europe/Paris
+
+apt:
+  # Valeurs: no-subscription, enterprise, none
+  channel: no-subscription
+  update: true
+  dist_upgrade: false
+  packages:
+    - curl
+    - git
+    - vim
+    - jq
+    - ifupdown2
+
+ssh:
+  hardening: false
+  password_auth: "no"
+  permit_root_login: prohibit-password
+
+network:
+  # Attention: enabled: true reecrit /etc/network/interfaces.
+  enabled: false
+  reload: false
+
+  management:
+    iface: eno1
+    bridge: vmbr0
+    address: 192.168.1.10/24
+    gateway: 192.168.1.1
+    dns:
+      - 192.168.1.1
+      - 1.1.1.1
+
+  bridge:
+    vlan_aware: true
+    vids: 2-4094
+
+  # Format: "bridge:address:ports:comment"
+  # Utilise "none" pour address ou ports si vide.
+  extra_bridges:
+    # - "vmbr20:192.168.20.1/24:none:services"
+    # - "vmbr30:none:none:lab"
+
+storage:
+  snippets:
+    enabled: true
+    id: snippets
+    path: /var/lib/vz/snippets
+
+  backup_dir:
+    enabled: false
+    id: backup-local
+    path: /var/lib/vz/dump
+
+pbs:
+  enabled: false
+  storage_id: pbs
+  server: pbs.example.local
+  datastore: datastore
+  username: root@pam
+  password_file: /root/.pbs-password
+  fingerprint: ""
+
+backup:
+  job:
+    enabled: false
+    id: daily-all
+    storage: backup-local
+    schedule: daily
+    mode: snapshot
+    vmid: all
+    prune: keep-daily=7,keep-weekly=4,keep-monthly=3
+
+terraform:
+  # A utiliser si tu veux que le meme bootstrap lance aussi la creation/update des VM.
+  enabled: false
+  dir: /root/prox/terraform/wireguard-ct
+  auto_approve: false

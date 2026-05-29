@@ -28,35 +28,35 @@ Si `git status` montre des fichiers modifies localement, lis-les avant de faire 
 Le fichier reel de bootstrap n'est pas versionne :
 
 ```bash
-config/proxmox-bootstrap.env
+config/proxmox-bootstrap.yml
 ```
 
 Verifie qu'il existe toujours :
 
 ```bash
-test -f config/proxmox-bootstrap.env
+test -f config/proxmox-bootstrap.yml
 ```
 
 Si le fichier exemple a change, compare :
 
 ```bash
-diff -u config/proxmox-bootstrap.env.example config/proxmox-bootstrap.env
+diff -u config/proxmox-bootstrap.yml.example config/proxmox-bootstrap.yml
 ```
 
-Adapte `config/proxmox-bootstrap.env` si une nouvelle variable utile a ete ajoutee.
+Adapte `config/proxmox-bootstrap.yml` si une nouvelle variable utile a ete ajoutee.
 
 ## 3. Appliquer les changements du node
 
 Si les changements concernent le node Proxmox lui-meme, lance d'abord un dry-run :
 
 ```bash
-sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --dry-run
+sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --dry-run
 ```
 
 Puis applique :
 
 ```bash
-sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --yes
+sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --yes
 ```
 
 Tu n'es pas oblige de relancer le bootstrap pour chaque nouvelle VM. Si seuls les fichiers Terraform ont change, passe directement a la partie Terraform.

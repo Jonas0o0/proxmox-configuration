@@ -19,7 +19,7 @@ Prepare ces valeurs avant l'installation :
 | Mot de passe root | secret, hors Git |
 | Email admin | adresse pour alertes Proxmox |
 
-Si tu veux configurer le reseau avec le script plus tard, garde aussi les valeurs correspondantes dans `config/proxmox-bootstrap.env`.
+Si tu veux configurer le reseau avec le script plus tard, garde aussi les valeurs correspondantes dans `config/proxmox-bootstrap.yml`.
 
 ## 2. Booter sur la cle USB
 
@@ -106,37 +106,50 @@ Copie le fichier exemple :
 
 ```bash
 cd /root/prox
-cp config/proxmox-bootstrap.env.example config/proxmox-bootstrap.env
-nano config/proxmox-bootstrap.env
+cp config/proxmox-bootstrap.yml.example config/proxmox-bootstrap.yml
+nano config/proxmox-bootstrap.yml
 ```
 
 Verifie surtout :
 
-```bash
-PROXMOX_HOSTNAME="pve"
-TIMEZONE="Europe/Paris"
-APT_CHANNEL="no-subscription"
-INSTALL_PACKAGES="curl git vim jq ifupdown2"
+```yaml
+base:
+  proxmox_hostname: pve
+  timezone: Europe/Paris
+
+apt:
+  channel: no-subscription
+  packages:
+    - curl
+    - git
+    - vim
+    - jq
+    - ifupdown2
 ```
 
 Pour le reseau, par defaut le script ne reecrit pas `/etc/network/interfaces` :
 
-```bash
-MANAGE_NETWORK=false
+```yaml
+network:
+  enabled: false
 ```
 
 Passe a `true` seulement si tu veux que le repo devienne la source de verite du reseau :
 
-```bash
-MANAGE_NETWORK=true
-MGMT_IFACE="eno1"
-MGMT_BRIDGE="vmbr0"
-MGMT_ADDRESS="192.168.1.10/24"
-MGMT_GATEWAY="192.168.1.1"
-MGMT_DNS="192.168.1.1 1.1.1.1"
+```yaml
+network:
+  enabled: true
+  management:
+    iface: eno1
+    bridge: vmbr0
+    address: 192.168.1.10/24
+    gateway: 192.168.1.1
+    dns:
+      - 192.168.1.1
+      - 1.1.1.1
 ```
 
-Si tu actives `MANAGE_NETWORK=true`, fais le premier run depuis la console locale ou l'interface Web Proxmox. Une erreur reseau peut couper ta session SSH.
+Si tu actives `network.enabled: true`, fais le premier run depuis la console locale ou l'interface Web Proxmox. Une erreur reseau peut couper ta session SSH.
 
 ## 7. Tester sans appliquer
 
@@ -144,7 +157,7 @@ Lance un dry-run :
 
 ```bash
 cd /root/prox
-sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --dry-run
+sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --dry-run
 ```
 
 Lis les commandes affichees. Si le script veut modifier un fichier critique comme `/etc/network/interfaces`, verifie les IP avant de continuer.
@@ -154,7 +167,7 @@ Lis les commandes affichees. Si le script veut modifier un fichier critique comm
 Quand le dry-run est correct :
 
 ```bash
-sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.env --yes
+sudo ./scripts/bootstrap-proxmox.sh --config config/proxmox-bootstrap.yml --yes
 ```
 
 Le script peut gerer :
@@ -180,12 +193,13 @@ cp terraform/wireguard-ct/terraform.tfvars.example terraform/wireguard-ct/terraf
 nano terraform/wireguard-ct/terraform.tfvars
 ```
 
-Puis dans `config/proxmox-bootstrap.env` :
+Puis dans `config/proxmox-bootstrap.yml` :
 
-```bash
-RUN_TERRAFORM=true
-TERRAFORM_DIR="/root/prox/terraform/wireguard-ct"
-TERRAFORM_AUTO_APPROVE=false
+```yaml
+terraform:
+  enabled: true
+  dir: /root/prox/terraform/wireguard-ct
+  auto_approve: false
 ```
 
 Sinon, lance Terraform manuellement :
@@ -197,7 +211,7 @@ terraform plan
 terraform apply
 ```
 
-Garde `TERRAFORM_AUTO_APPROVE=false` au debut pour voir le plan avant application.
+Garde `terraform.auto_approve: false` au debut pour voir le plan avant application.
 
 ## 10. Verification finale
 
