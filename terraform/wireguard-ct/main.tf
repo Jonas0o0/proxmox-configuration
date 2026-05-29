@@ -16,26 +16,38 @@ resource "proxmox_virtual_environment_download_file" "lxc_template" {
   file_name    = basename(var.container_template_url)
 }
 
-resource "proxmox_virtual_environment_file" "wireguard_hook" {
+resource "proxmox_virtual_environment_file" "wg_easy_hook" {
   content_type = "snippets"
   datastore_id = var.snippets_datastore_id
   node_name    = var.node_name
   file_mode    = "0700"
 
   source_raw {
-    data      = local.wireguard_hook_script
-    file_name = "${var.container_hostname}-wireguard-hook.sh"
+    data      = file("${path.module}/files/wg-easy-hook.sh")
+    file_name = "${var.container_hostname}-wg-easy-hook.sh"
   }
 }
 
-resource "proxmox_virtual_environment_container" "wireguard" {
+resource "proxmox_virtual_environment_file" "wg_easy_compose" {
+  content_type = "snippets"
+  datastore_id = var.snippets_datastore_id
+  node_name    = var.node_name
+  file_mode    = "0644"
+
+  source_raw {
+    data      = file("${path.module}/files/docker-compose.yml")
+    file_name = "wg-easy-docker-compose.yml"
+  }
+}
+
+resource "proxmox_virtual_environment_container" "wg_easy" {
   description = var.container_description
   tags        = var.container_tags
 
   node_name = var.node_name
   vm_id     = var.container_id
 
-  hook_script_file_id = proxmox_virtual_environment_file.wireguard_hook.id
+  hook_script_file_id = proxmox_virtual_environment_file.wg_easy_hook.id
   protection          = false
   started             = var.container_started
   start_on_boot       = var.container_start_on_boot
@@ -104,4 +116,8 @@ resource "proxmox_virtual_environment_container" "wireguard" {
     up_delay   = "30"
     down_delay = "30"
   }
+
+  depends_on = [
+    proxmox_virtual_environment_file.wg_easy_compose
+  ]
 }

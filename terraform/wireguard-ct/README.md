@@ -1,14 +1,16 @@
-# WireGuard CT
+# wg-easy CT
 
-Ce dossier cree une CT LXC Alpine par defaut pour WireGuard sur Proxmox.
+Ce dossier cree une CT LXC Alpine par defaut pour lancer [wg-easy](https://github.com/wg-easy/wg-easy) sur Proxmox.
 
 Terraform gere :
 
 - le telechargement du template LXC ;
 - la creation de la CT ;
 - le passage de `/dev/net/tun` dans la CT ;
-- le hook Proxmox qui installe et configure WireGuard dans la CT ;
-- la configuration des peers WireGuard si tu les declares dans `wg_peers`.
+- l'upload d'un hook Proxmox ;
+- l'installation de Docker dans la CT ;
+- la generation d'un `docker-compose.yml` wg-easy ;
+- le demarrage du container Docker `wg-easy`.
 
 ## Prerequis
 
@@ -16,26 +18,9 @@ Terraform gere :
 - Un storage avec le contenu `snippets` active. Le bootstrap du repo peut creer le storage `snippets`.
 - Un token API Proxmox. Pour ce module, utilise idealement `root@pam` car le hookscript doit etre executable.
 - Acces SSH au node Proxmox pour uploader les snippets.
-- Le port UDP WireGuard doit etre ouvert ou redirige vers l'IP de la CT.
-- Si tu mets `network_firewall = true`, ajoute aussi une regle firewall Proxmox qui autorise l'UDP sur `wg_listen_port`.
-
-## Alpine ou Debian
-
-Alpine est le defaut du module :
-
-```hcl
-container_os_type      = "alpine"
-container_template_url = "http://download.proxmox.com/images/system/alpine-3.23-default_20260116_amd64.tar.xz"
-```
-
-Pour WireGuard seul, Alpine est souvent le meilleur choix : image tres petite, surface systeme reduite, OpenRC simple.
-
-Debian reste possible si tu veux un environnement plus familier ou plus proche de tes autres CT :
-
-```hcl
-container_os_type      = "debian"
-container_template_url = "http://download.proxmox.com/images/system/debian-12-standard_12.12-1_amd64.tar.zst"
-```
+- Le port UDP `51820` doit etre ouvert ou redirige vers l'IP de la CT.
+- Le port TCP `51821` donne acces a l'interface Web wg-easy.
+- Docker dans LXC est plus simple avec une CT privilegiee, donc `container_unprivileged = false` par defaut.
 
 ## Utilisation
 
@@ -50,68 +35,91 @@ terraform plan
 terraform apply
 ```
 
-Apres application, recupere la cle publique du serveur :
+Apres application, affiche l'URL :
 
 ```bash
-terraform output -raw wireguard_public_key_command
-pct exec 110 -- wg show wg0 public-key
+terraform output -raw wg_easy_url
 ```
 
-Verifie le service :
+Par defaut :
+
+```text
+http://192.168.1.20:51821
+```
+
+## Verification
+
+Verifier la CT :
 
 ```bash
-pct exec 110 -- rc-service wg-quick.wg0 status
-pct exec 110 -- wg show wg0
+pct status 110
+pct enter 110
 ```
 
-Sur Debian, la commande de service equivalente est :
+Verifier Docker et wg-easy :
 
 ```bash
-pct exec 110 -- systemctl status wg-quick@wg0
+pct exec 110 -- docker ps
+pct exec 110 -- docker logs wg-easy
+pct exec 110 -- docker compose -f /etc/docker/containers/wg-easy/docker-compose.yml ps
 ```
 
-## Ajouter un client
-
-Ajoute un peer dans `terraform.tfvars` :
-
-```hcl
-wg_peers = [
-  {
-    name        = "phone"
-    public_key  = "CLE_PUBLIQUE_DU_CLIENT"
-    allowed_ips = ["10.8.0.2/32"]
-  }
-]
-```
-
-Puis applique :
+Relancer wg-easy :
 
 ```bash
-terraform plan
-terraform apply
+pct exec 110 -- docker compose -f /etc/docker/containers/wg-easy/docker-compose.yml restart
 ```
 
-Le hook mettra a jour `/etc/wireguard/wg0.conf` au prochain demarrage de la CT. Pour appliquer tout de suite :
+Redemarrer toute la CT :
 
 ```bash
 pct reboot 110
 ```
 
-Si tu mets `wg_private_key` ou `preshared_key` dans Terraform, ces secrets finiront dans le state Terraform. Pour eviter ca, laisse `wg_private_key` vide : la cle serveur sera generee dans la CT.
+## Configuration wg-easy
 
-## Exemple de config client
+Les clients WireGuard ne sont plus declares dans Terraform. Tu les crees depuis l'interface Web wg-easy.
 
-```ini
-[Interface]
-Address = 10.8.0.2/32
-PrivateKey = CLE_PRIVEE_DU_CLIENT
-DNS = 192.168.1.1
+Terraform garde l'infrastructure :
 
-[Peer]
-PublicKey = CLE_PUBLIQUE_DU_SERVEUR
-Endpoint = IP_PUBLIQUE_OU_DNS:51820
-AllowedIPs = 0.0.0.0/0
-PersistentKeepalive = 25
+- CT ;
+- reseau ;
+- Docker ;
+- container wg-easy ;
+- ports exposes.
+
+wg-easy garde la configuration WireGuard dans son volume Docker `etc_wireguard`.
+
+## Configuration utilisee
+
+La configuration applicative est versionnee ici :
+
+[files/docker-compose.yml](files/docker-compose.yml)
+
+Elle utilise :
+
+- image : `ghcr.io/wg-easy/wg-easy:15` ;
+- port WireGuard : `51820/udp` ;
+- interface Web : `51821/tcp` ;
+- volume Docker : `etc_wireguard` ;
+- mode `INSECURE=true`.
+
+`INSECURE=true` est pratique en LAN, mais l'interface Web doit rester limitee a un reseau de confiance. Pour une exposition publique, mets wg-easy derriere un reverse proxy HTTPS et adapte le compose.
+
+## Alpine ou Debian
+
+Alpine est le defaut du module :
+
+```hcl
+container_os_type      = "alpine"
+container_template_url = "http://download.proxmox.com/images/system/alpine-3.23-default_20260116_amd64.tar.xz"
+```
+
+Debian reste possible :
+
+```hcl
+container_os_type      = "debian"
+container_template_url = "http://download.proxmox.com/images/system/debian-12-standard_12.12-1_amd64.tar.zst"
 ```
 
 ## Notes Proxmox 8

@@ -41,33 +41,33 @@ variable "node_name" {
 }
 
 variable "container_id" {
-  description = "VMID de la CT WireGuard."
+  description = "VMID de la CT wg-easy."
   type        = number
   default     = 110
 }
 
 variable "container_hostname" {
-  description = "Hostname de la CT WireGuard."
+  description = "Hostname de la CT wg-easy."
   type        = string
-  default     = "wireguard"
+  default     = "wg-easy"
 }
 
 variable "container_description" {
   description = "Description visible dans Proxmox."
   type        = string
-  default     = "WireGuard CT managed by Terraform"
+  default     = "wg-easy CT managed by Terraform"
 }
 
 variable "container_tags" {
   description = "Tags Proxmox."
   type        = list(string)
-  default     = ["terraform", "wireguard", "vpn"]
+  default     = ["terraform", "wg-easy", "vpn"]
 }
 
 variable "container_unprivileged" {
-  description = "Cree une CT non privilegiee."
+  description = "Cree une CT non privilegiee. Docker dans LXC est plus simple en privilegie, donc false par defaut."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "container_os_type" {
@@ -121,7 +121,7 @@ variable "rootfs_datastore_id" {
 variable "rootfs_size_gb" {
   description = "Taille du rootfs en Go."
   type        = number
-  default     = 4
+  default     = 8
 }
 
 variable "cpu_cores" {
@@ -133,7 +133,7 @@ variable "cpu_cores" {
 variable "memory_mb" {
   description = "RAM dediee en Mo."
   type        = number
-  default     = 512
+  default     = 1024
 }
 
 variable "swap_mb" {
@@ -203,61 +203,5 @@ variable "root_password" {
 variable "snippets_datastore_id" {
   description = "Storage Proxmox avec contenu snippets active. Utilise pour le hookscript."
   type        = string
-  default     = "local"
-}
-
-variable "wg_interface" {
-  description = "Nom de l'interface WireGuard dans la CT."
-  type        = string
-  default     = "wg0"
-}
-
-variable "wg_address" {
-  description = "Adresse VPN du serveur WireGuard."
-  type        = string
-  default     = "10.8.0.1/24"
-}
-
-variable "wg_network_cidr" {
-  description = "Reseau WireGuard utilise pour la regle NAT."
-  type        = string
-  default     = "10.8.0.0/24"
-}
-
-variable "wg_listen_port" {
-  description = "Port UDP WireGuard."
-  type        = number
-  default     = 51820
-}
-
-variable "wg_private_key" {
-  description = "Cle privee WireGuard du serveur. Si null, elle est generee dans la CT au premier demarrage."
-  type        = string
-  default     = null
-  nullable    = true
-  sensitive   = true
-}
-
-variable "wg_enable_nat" {
-  description = "Ajoute des regles iptables MASQUERADE pour sortir vers le LAN/Internet."
-  type        = bool
-  default     = true
-}
-
-variable "wg_wan_interface" {
-  description = "Interface de sortie vue depuis la CT, generalement eth0."
-  type        = string
-  default     = "eth0"
-}
-
-variable "wg_peers" {
-  description = "Peers WireGuard a injecter dans la configuration serveur."
-  type = list(object({
-    name          = string
-    public_key    = string
-    allowed_ips   = list(string)
-    preshared_key = optional(string)
-  }))
-  default   = []
-  sensitive = true
+  default     = "snippets"
 }

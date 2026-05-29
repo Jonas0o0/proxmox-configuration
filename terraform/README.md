@@ -9,7 +9,7 @@ Terraform est adapte pour :
 - declarer les disques, CPU, RAM et cartes reseau ;
 - appliquer une configuration reproductible apres une reinstall Proxmox.
 
-Il n'est pas ideal pour tout ce qui touche a l'interieur des VM. Pour installer Docker, configurer WireGuard, creer des utilisateurs Linux ou deployer des services, utilise plutot Ansible ensuite.
+Il n'est pas ideal pour tout ce qui touche a l'interieur des VM. Pour installer des services complexes, creer des utilisateurs Linux ou deployer des fichiers applicatifs, utilise plutot Ansible ensuite.
 
 
 ## Flux conseille
@@ -21,4 +21,4 @@ Il n'est pas ideal pour tout ce qui touche a l'interieur des VM. Pour installer 
 
 ## Modules disponibles
 
-- [wireguard-ct](wireguard-ct/) : cree une CT LXC Alpine/Debian avec WireGuard.
+- [wireguard-ct](wireguard-ct/) : cree une CT LXC Alpine/Debian avec wg-easy.

@@ -1,10 +1,10 @@
 output "container_id" {
-  description = "ID de la CT WireGuard."
-  value       = proxmox_virtual_environment_container.wireguard.vm_id
+  description = "ID de la CT wg-easy."
+  value       = proxmox_virtual_environment_container.wg_easy.vm_id
 }
 
 output "container_hostname" {
-  description = "Hostname de la CT WireGuard."
+  description = "Hostname de la CT wg-easy."
   value       = var.container_hostname
 }
 
@@ -13,14 +13,14 @@ output "container_ipv4" {
   value       = var.ipv4_address
 }
 
-output "wireguard_listen_port" {
-  description = "Port UDP WireGuard."
-  value       = var.wg_listen_port
+output "wg_easy_url" {
+  description = "URL de l'interface Web wg-easy."
+  value       = var.ipv4_address == "dhcp" ? "http://<ip-dhcp>:51821" : "http://${split("/", var.ipv4_address)[0]}:51821"
 }
 
-output "wireguard_server_address" {
-  description = "Adresse du serveur dans le tunnel WireGuard."
-  value       = var.wg_address
+output "wg_easy_wireguard_port" {
+  description = "Port UDP WireGuard expose par wg-easy."
+  value       = 51820
 }
 
 output "root_password" {
@@ -34,12 +34,12 @@ output "ssh_command" {
   value       = var.ipv4_address == "dhcp" ? "ssh root@<ip-dhcp>" : "ssh root@${split("/", var.ipv4_address)[0]}"
 }
 
-output "wireguard_public_key_command" {
-  description = "Commande a lancer sur le node Proxmox pour recuperer la cle publique WireGuard serveur."
-  value       = "pct exec ${var.container_id} -- wg show ${var.wg_interface} public-key"
+output "wg_easy_status_command" {
+  description = "Commande a lancer sur le node Proxmox pour verifier le container Docker wg-easy."
+  value       = "pct exec ${var.container_id} -- docker ps --filter name=wg-easy"
 }
 
-output "wireguard_status_command" {
-  description = "Commande a lancer sur le node Proxmox pour verifier WireGuard."
-  value       = "pct exec ${var.container_id} -- wg show ${var.wg_interface}"
+output "wg_easy_logs_command" {
+  description = "Commande a lancer sur le node Proxmox pour lire les logs wg-easy."
+  value       = "pct exec ${var.container_id} -- docker logs wg-easy"
 }

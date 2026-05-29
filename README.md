@@ -114,9 +114,9 @@ Terraform est utilise pour gerer les ressources Proxmox : VM, CT, disques, resea
 
 Module disponible :
 
-- [terraform/wireguard-ct](terraform/wireguard-ct/) : cree une CT LXC Alpine/Debian avec WireGuard.
+- [terraform/wireguard-ct](terraform/wireguard-ct/) : cree une CT LXC Alpine/Debian avec wg-easy.
 
-Exemple WireGuard :
+Exemple wg-easy :
 
 ```bash
 cd /root/prox/terraform/wireguard-ct
