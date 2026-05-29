@@ -46,7 +46,10 @@ Le `--dry-run` permet de voir les actions avant de modifier le systeme.
 |   `-- bootstrap-proxmox.sh
 `-- terraform/
     |-- README.md
-    `-- wireguard-ct/
+    |-- provider.tf
+    |-- versions.tf
+    |-- wg-easy.tf
+    `-- modules/
 ```
 
 ## Bootstrap Proxmox
@@ -101,7 +104,7 @@ Workflow typique :
 cd /root/prox
 git pull
 
-cd /root/prox/terraform/wireguard-ct
+cd /root/prox/terraform
 terraform init
 terraform validate
 terraform plan
@@ -114,14 +117,16 @@ Terraform est utilise pour gerer les ressources Proxmox : VM, CT, disques, resea
 
 Module disponible :
 
-- [terraform/wireguard-ct](terraform/wireguard-ct/) : cree une CT LXC Alpine/Debian avec wg-easy.
+- [terraform/wg-easy.tf](terraform/wg-easy.tf) : declare la CT wg-easy.
+- [terraform/modules/wg-easy-ct](terraform/modules/wg-easy-ct/) : module reutilisable qui cree une CT LXC Alpine/Debian avec wg-easy.
 
 Exemple wg-easy :
 
 ```bash
-cd /root/prox/terraform/wireguard-ct
+cd /root/prox/terraform
 cp terraform.tfvars.example terraform.tfvars
 nano terraform.tfvars
+nano wg-easy.tf
 
 terraform init
 terraform validate

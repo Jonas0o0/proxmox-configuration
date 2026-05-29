@@ -203,7 +203,7 @@ backup:
 ```yaml
 terraform:
   enabled: false
-  dir: /root/prox/terraform/wireguard-ct
+  dir: /root/prox/terraform
   auto_approve: false
 ```
 

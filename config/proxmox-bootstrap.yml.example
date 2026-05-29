@@ -79,5 +79,5 @@ backup:
 terraform:
   # A utiliser si tu veux que le meme bootstrap lance aussi la creation/update des VM.
   enabled: false
-  dir: /root/prox/terraform/wireguard-ct
+  dir: /root/prox/terraform
   auto_approve: false

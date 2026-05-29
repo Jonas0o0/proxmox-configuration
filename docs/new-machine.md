@@ -189,8 +189,9 @@ Si tu veux que le bootstrap lance aussi Terraform :
 
 ```bash
 cd /root/prox
-cp terraform/wireguard-ct/terraform.tfvars.example terraform/wireguard-ct/terraform.tfvars
-nano terraform/wireguard-ct/terraform.tfvars
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+nano terraform/terraform.tfvars
+nano terraform/wg-easy.tf
 ```
 
 Puis dans `config/proxmox-bootstrap.yml` :
@@ -198,14 +199,14 @@ Puis dans `config/proxmox-bootstrap.yml` :
 ```yaml
 terraform:
   enabled: true
-  dir: /root/prox/terraform/wireguard-ct
+  dir: /root/prox/terraform
   auto_approve: false
 ```
 
 Sinon, lance Terraform manuellement :
 
 ```bash
-cd /root/prox/terraform/wireguard-ct
+cd /root/prox/terraform
 terraform init
 terraform plan
 terraform apply

@@ -25,9 +25,11 @@ Terraform gere :
 ## Utilisation
 
 ```bash
-cd /root/prox/terraform/wireguard-ct
+cd /root/prox/terraform
 cp terraform.tfvars.example terraform.tfvars
 nano terraform.tfvars
+nano wg-easy.tf
+export TF_VAR_proxmox_api_token='root@pam!terraform=token'
 
 terraform init
 terraform validate

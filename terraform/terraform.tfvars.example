@@ -1,0 +1,17 @@
+proxmox_endpoint             = "https://pve.home.arpa:8006/api2/json"
+proxmox_ssh_username         = "root"
+proxmox_ssh_private_key_path = "~/.ssh/proxmox_terraform"
+
+ssh_public_keys = []
+
+wg_easy_node_name                = "pve"
+wg_easy_container_id             = 110
+wg_easy_container_hostname       = "wg-easy"
+wg_easy_rootfs_datastore_id      = "local-lvm"
+wg_easy_snippets_datastore_id    = "snippets"
+wg_easy_network_bridge           = "vmbr0"
+wg_easy_network_vlan_id          = null
+wg_easy_ipv4_address             = "192.168.1.20/24"
+wg_easy_ipv4_gateway             = "192.168.1.1"
+wg_easy_dns_servers              = ["192.168.1.1", "1.1.1.1"]
+wg_easy_dns_domain               = "home.arpa"

@@ -66,7 +66,7 @@ Tu n'es pas oblige de relancer le bootstrap pour chaque nouvelle VM. Si seuls le
 Va dans le dossier Terraform concerne :
 
 ```bash
-cd /root/prox/terraform/wireguard-ct
+cd /root/prox/terraform
 ```
 
 Initialise ou mets a jour les providers/modules :
@@ -115,7 +115,7 @@ Commandes :
 cd /root/prox
 git pull
 
-cd /root/prox/terraform/wireguard-ct
+cd /root/prox/terraform
 terraform init
 terraform validate
 terraform plan
